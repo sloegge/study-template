@@ -1,0 +1,47 @@
+------------------------------------------------------------
+Package: here 
+
+Müller K (2020). _here: A Simpler Way to Find Your Files_. doi:10.32614/CRAN.package.here
+<https://doi.org/10.32614/CRAN.package.here>, R package version 1.0.1, <https://CRAN.R-project.org/package=here>.
+
+
+------------------------------------------------------------
+Package: quarto 
+
+Allaire J, Dervieux C (2024). _quarto: R Interface to 'Quarto' Markdown Publishing System_.
+doi:10.32614/CRAN.package.quarto <https://doi.org/10.32614/CRAN.package.quarto>, R package version 1.4.4,
+<https://CRAN.R-project.org/package=quarto>.
+
+
+------------------------------------------------------------
+Package: labelled 
+
+Larmarange J (2025). _labelled: Manipulating Labelled Data_. doi:10.32614/CRAN.package.labelled
+<https://doi.org/10.32614/CRAN.package.labelled>, R package version 2.14.1,
+<https://CRAN.R-project.org/package=labelled>.
+
+
+------------------------------------------------------------
+Package: stringr 
+
+Wickham H (2023). _stringr: Simple, Consistent Wrappers for Common String Operations_.
+doi:10.32614/CRAN.package.stringr <https://doi.org/10.32614/CRAN.package.stringr>, R package version 1.5.1,
+<https://CRAN.R-project.org/package=stringr>.
+
+
+------------------------------------------------------------
+Package: tidyverse 
+
+Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, Grolemund G, Hayes A, Henry L, Hester J, Kuhn M,
+Pedersen TL, Miller E, Bache SM, Müller K, Ooms J, Robinson D, Seidel DP, Spinu V, Takahashi K, Vaughan D, Wilke C, Woo
+K, Yutani H (2019). “Welcome to the tidyverse.” _Journal of Open Source Software_, *4*(43), 1686.
+doi:10.21105/joss.01686 <https://doi.org/10.21105/joss.01686>.
+
+
+------------------------------------------------------------
+Package: ggplot2 
+
+Wickham H (2016). _ggplot2: Elegant Graphics for Data Analysis_. Springer-Verlag New York. ISBN 978-3-319-24277-4,
+<https://ggplot2.tidyverse.org>.
+
+

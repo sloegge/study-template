@@ -1,0 +1,346 @@
+---
+title: "Pilot2_2025_OC"
+author: "Blinded for review"
+toc: true
+toc-depth: 5
+toc-title: Contents
+number-sections: true
+execute:
+  cache: true
+  echo: true
+format:
+  html: 
+    link-external-icon: true
+    link-external-newwindow: true
+    code-block-bg: true
+    code-block-border-left: "#31BAE9"
+    embed-resources: true
+    self-contained-math: true
+---
+
+# Pilot: Overconfidence and Item difficulty baseline
+
+## Setup
+
+### Packages
+```{r}
+#| echo: true
+#| warning: false
+#| output: false
+#| code-fold: true
+#| code-summary: "Show the code"
+#| cache: false
+
+# Load packages
+packages <- c("renv", "quarto", "tidyverse", "ggplot2", "here", "readr", "labelled")
+
+for (pkg in packages) {
+  if (!requireNamespace(pkg, quietly = TRUE)) install.packages(pkg)
+  library(pkg, character.only = TRUE)
+}
+
+# renv::init() # Initialize renv (use renv::restore() to reproduce the analysis and restore the project environment)
+library(renv)
+#renv::activate() # optional (manual)
+
+library(quarto)
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(here) # use here to navigate within the project's subfolders
+library(labelled)
+library(scales)
+library(dplyr)
+```
+
+### Load Data
+```{r}
+#| echo: true
+#| warning: false
+#| output: false
+#| code-fold: true
+#| code-summary: "Show the code"
+#| cache: false
+
+pilot_data <- read.csv("Data/JRP Confidence Pilot _Final_February 14, 2025_03.03.csv", header = F)
+pilot_data <- pilot_data[-3, ]
+
+questions <- as.character(pilot_data[2, ])  # Questions (2nd row)
+var_names <- as.character(pilot_data[1, ])  # Variable names (1st row)
+
+pilot_data <- pilot_data[-c(1, 2), ]
+
+colnames(pilot_data) <- stringr::str_to_lower(var_names)
+pilot_data <- labelled::set_variable_labels(pilot_data, .labels = setNames(questions, colnames(pilot_data)))
+
+pilot_data <- as.data.frame(lapply(pilot_data, function(col) {
+  converted_col <- type.convert(as.character(col), as.is = TRUE)
+  labelled::set_variable_labels(converted_col, .labels = attr(col, "label"))
+}))
+
+# data cleaning
+
+pilot_data <- pilot_data[-1, ] # Test answer from confederate
+
+pilot_data <- pilot_data[pilot_data$q_recaptchascore >= 0.5, ] # removes 2 rows (Indicates a high probability to not be a human answer)
+
+pilot_data <- pilot_data[pilot_data$q_relevantidfraudscore < 30, ] # removes 2 rows (Indicates a high probability to not be a human answer)
+
+pilot_data <- pilot_data[pilot_data$q_relevantidduplicatescore == 0, ] # 0 = low probability of duplicate
+
+# Consent
+pilot_data <- pilot_data[!is.na(pilot_data$consent) & pilot_data$consent == 1, ] # all participants gave consent
+
+# Attention Check
+pilot_data <- pilot_data[pilot_data$att1 == 2, ] # 3 participants removed for failing the attention check
+
+```
+
+### Prepare Data for analysis (and osf)
+```{r}
+#| echo: true
+#| warning: false
+#| output: false
+#| code-fold: true
+#| code-summary: "Show the code"
+#| cache: false
+
+colnames(pilot_data)
+
+pilot_data_clean <- pilot_data %>%  select(consent, att1, duration..in.seconds., t1_relative_1, t1_absolut_1, t2_relative_1, t2_absolute_1, sc0, f1:f16, r1:r16, news_consumption, age, gender, education)
+
+pilot_data_clean <- pilot_data_clean %>% mutate(ID = row_number())
+
+# Export for OSF
+## write.csv(pilot_data_clean, here("Data", "pilot2_osf_20250214.csv"), row.names = FALSE)
+```
+
+# Analysis
+
+## Descriptive analysis
+```{r}
+#| echo: true
+#| warning: false
+#| output: true
+#| code-fold: true
+#| code-summary: "Show the code"
+#| cache: false
+
+# Demographics
+
+## Age
+
+summary(pilot_data_clean$age)
+sd(pilot_data_clean$age)
+
+hist_age <- {
+  hist(pilot_data_clean$age, 
+       main = "Age of the Participants in Pilot 2", 
+       xlab = "Age", 
+       ylab = "Frequency", 
+       xlim = range(pilot_data_clean$age, na.rm = TRUE), 
+       ylim = c(0, ceiling(max(hist(pilot_data_clean$age, plot = FALSE)$counts) / 5) * 5),
+       breaks = seq(min(pilot_data_clean$age, na.rm = TRUE), max(pilot_data_clean$age, na.rm = TRUE), by = 2),  
+       xaxt = "n",
+       yaxt = "n")
+  axis(1, at = seq(min(pilot_data_clean$age, na.rm = TRUE), max(pilot_data_clean$age, na.rm = TRUE), by = 5))
+  max_y <- ceiling(max(hist(pilot_data_clean$age, plot = FALSE)$counts) / 5) * 4
+  axis(2, at = seq(0, max_y, by = 5), las = 1)
+}
+
+
+## Education
+
+summary(pilot_data_clean$education <= 6) # 7 = 'prefer not to say'
+count_7 <- sum(pilot_data_clean$education == 7, na.rm = TRUE)
+print(count_7)
+
+sd(pilot_data_clean$education <= 6)
+
+education_labels <- c("No formal education", 
+                      "Middle school or lower", 
+                      "High school diploma", 
+                      "Bachelor's degree", 
+                      "Master's degree", 
+                      "Doctorate")
+
+hist_edu <- {
+  hist(pilot_data_clean$education[pilot_data_clean$education <= 6], 
+       main = "Education of the Participants in Pilot 2", 
+       xlab = "Education level",
+       ylab = "Frequency", 
+       xlim = c(1, 6),  
+       ylim = c(0, max(hist(pilot_data_clean$education[pilot_data_clean$education <= 6], plot = FALSE)$counts) + 5), 
+       breaks = seq(0.5, 6.5, by = 1),
+       right = TRUE,  
+       xaxt = "n")
+
+  axis(1, at = 1:6, labels = c("No formal education", 
+                               "Middle school or lower", 
+                               "High school diploma", 
+                               "Bachelor's degree", 
+                               "Master's degree", 
+                               "Doctorate"), 
+       las = 1,
+       cex.axis = .65)
+}
+
+## Gender
+
+gender_summary <- pilot_data_clean %>%
+  count(gender) %>%
+  mutate(Percentage = round(n / sum(n) * 100, 2)) %>%
+  mutate(gender = recode(gender, 
+                         `1` = "Female", 
+                         `2` = "Male", 
+                         `3` = "Other", 
+                         `4` = "Prefer not to say"))
+print(gender_summary)
+
+# News consumption
+
+hist_news <- {
+  hist(pilot_data_clean$news_consumption, 
+       main = "News Consumption in Hours per Week of the Participants in Pilot 2", 
+       xlab = "News Consumption Level", 
+       ylab = "Frequency", 
+       xlim = c(1, 5),
+       ylim = c(0, ceiling(max(hist(pilot_data_clean$news_consumption, plot = FALSE)$counts) / 5) * 5),  # Round up to nearest 5
+       breaks = seq(0.5, 5.5, by = 1),
+       right = TRUE,  
+       xaxt = "n",
+       yaxt = "n")
+  axis(1, at = 1:5, labels = c("None", 
+                               "Less than 1 hour", 
+                               "1-4 hours", 
+                               "4-7 hours", 
+                               "More than 7 hours"), 
+       las = 1, 
+       cex.axis = 0.65)
+  max_y <- ceiling(max(hist(pilot_data_clean$news_consumption, plot = FALSE)$counts) / 5) * 5
+  axis(2, at = seq(0, max_y, by = 10), las = 1)
+}
+```
+
+## (Over)confidence Distribution
+```{r}
+#| echo: true
+#| warning: false
+#| output: true
+#| code-fold: true
+#| code-summary: "Show the code"
+#| cache: false
+
+
+## All descriptive plots for the various self estimations
+
+# Absolute confidence (before and after) (overconfidence)
+summary(pilot_data_clean$t1_absolut_1)
+sd(pilot_data_clean$t1_absolut_1)
+
+ggplot(pilot_data_clean, aes(x = t1_absolut_1)) +
+  geom_histogram(binwidth = 1, fill = "orange", alpha = 0.6) +
+  labs(title = "Distribution of Absolute Confidence (Before)", x = "t1_absolute_1", y = "Count")
+
+ggplot(pilot_data_clean, aes(x = t2_absolute_1)) +
+  geom_histogram(binwidth = 1, fill = "orange", alpha = 0.6) +
+  labs(title = "Distribution of Absolute Confidence (After)", x = "t2_absolute_1", y = "Count")
+
+# Relative confidence (before and after) (overplacement)
+summary(pilot_data_clean$t1_relative_1)
+sd(pilot_data_clean$t1_relative_1)
+
+ggplot(pilot_data_clean, aes(x = t1_relative_1)) +
+  geom_dotplot(fill = "darkblue", alpha = 0.9) +
+  labs(title = "Distribution of Relative Confidence (Before)", x = "t1_relative_1", y = "Count")
+
+ggplot(pilot_data_clean, aes(x = t2_relative_1)) +
+  geom_dotplot(fill = "darkblue", alpha = 0.9) +
+  labs(title = "Distribution of Relative Confidence (After)", x = "t2_relative_1", y = "Count")
+
+
+# Compute overestimation and overplacement
+pilot_data_clean2 <- pilot_data_clean %>%
+  mutate(
+    overestimation = t1_absolut_1 - sc0,  
+    actual_percentile = percent_rank(sc0) * 100,
+    overplacement = t1_relative_1 - actual_percentile,
+    
+    
+    overestimation_t2 = t2_absolute_1 - sc0,
+    overplacement_t2 = t2_relative_1 -actual_percentile
+  )
+
+
+ggplot(pilot_data_clean2, aes(x = overestimation)) +
+  geom_histogram(binwidth = 1, fill = "orange", alpha = 0.6) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Overestimation (Expected - Actual Score)", x = "Overestimation", y = "Count")
+
+paste("When comparing the actual performance to the first Evaluation (T1) we get",
+      sum(pilot_data_clean2$overestimation > 0), "overconfident and",
+      sum(pilot_data_clean2$overestimation < 0), "underconfident")
+
+ggplot(pilot_data_clean2, aes(x = overestimation_t2)) +
+  geom_histogram(binwidth = 1, fill = "orange", alpha = 0.6) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Overestimation (After - Actual Score)", x = "Overestimation", y = "Count")
+
+paste("This changes at T2 to",
+      sum(pilot_data_clean2$overestimation_t2 > 0), "overconfident and",
+      sum(pilot_data_clean2$overestimation_t2 < 0), "underconfident")
+
+ggplot(pilot_data_clean2, aes(x = overplacement)) +
+  geom_dotplot(fill = "darkblue", alpha = 0.6) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Overplacement (Perceived - Actual Percentile)", x = "Overplacement", y = "Count")
+
+ggplot(pilot_data_clean2, aes(x = overplacement_t2)) +
+  geom_dotplot(fill = "darkblue", alpha = 0.6) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Overplacement (Perceived (After) - Actual Percentile)", x = "Overplacement", y = "Count")
+
+
+
+ggplot(pilot_data_clean2, aes(x = sc0, y = t1_absolut_1)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Expected vs. Actual Performance", x = "Actual Score", y = "Expected Score")
+
+
+#to-do:
+
+#actually overconfident? within
+
+sum(pilot_data_clean2$t1_absolut_1 > pilot_data_clean2$sc0 & pilot_data_clean2$sc0 < pilot_data_clean2$t2_absolute_1)
+
+sum(pilot_data_clean2$t1_absolut_1 > pilot_data_clean2$sc0)
+
+sum(pilot_data_clean2$sc0 < pilot_data_clean2$t2_absolute_1)
+
+pilot_data_clean2[pilot_data_clean2$sc0 < pilot_data_clean2$t2_absolute_1, c("sc0", "t1_absolut_1", "t2_absolute_1")]
+
+#test includes only rows in which participants overestimated themselfs (after)
+test <- pilot_data_clean2[pilot_data_clean2$sc0 < pilot_data_clean2$t2_absolute_1, c("sc0", "t1_absolut_1", "t2_absolute_1")]
+
+test$diff <- test$t2_absolute_1 - test$sc0
+
+test
+
+ggplot(pilot_data_clean2, aes(x = sc0, y = overestimation)) +
+    geom_point(alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, color = "blue") +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+    labs(title = "Dunning-Kruger Effect?: Overestimation_t1 vs. Actual Performance", 
+         x = "Actual Performance (sc0)",
+         y = "Overestimation (Expected (t1) - Actual)")
+
+ggplot(pilot_data_clean2, aes(x = sc0, y = overestimation_t2)) +
+     geom_point(alpha = 0.6) +
+     geom_smooth(method = "lm", se = FALSE, color = "blue") +
+     geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+     labs(title = "Dunning-Kruger Effect?: Overestimation_t2 vs. Actual Performance",
+          x = "Actual Performance (sc0)",
+          y = "Overestimation (Expected (t2) - Actual)")
+#test difficulty. Item_response (Bias?)
+```

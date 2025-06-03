@@ -1,0 +1,82 @@
+---
+title: "Quarto Template"
+author: "Blinded for review"
+date: "`r Sys.Date()`"
+toc: true
+toc-depth: 5
+toc-title: Contents
+number-sections: true
+execute:
+  cache: true
+  echo: true
+format:
+  html: 
+    link-external-icon: true
+    link-external-newwindow: true
+    code-block-bg: true
+    code-block-border-left: "#31BAE9"
+    embed-resources: true
+    self-contained-math: true
+---
+
+# Main Title
+
+## Setup
+
+### Renv environment status check
+```{r setup, include = False}
+renv::status()
+```
+
+### Load data
+```{r Load Data, include = False}
+data <- read.csv(here("Data", "filename"), header = FALSE) # replace "filename" with your actual file name
+
+questions <- as.character(data[2, ])  # Depends on your structure
+var_names <- as.character(data[1, ])  # Depends on your structure
+
+data <- data[-c(1, 2), ]
+
+colnames(data) <- stringr::str_to_lower(var_names)
+data <- labelled::set_variable_labels(data, .labels = setNames(questions, colnames(data)))
+
+data <- as.data.frame(lapply(data, function(col) {
+  converted_col <- type.convert(as.character(col), as.is = TRUE)
+  labelled::set_variable_labels(converted_col, .labels = attr(col, "label"))
+}))
+```
+
+### Data cleaning
+```{r Data Cleaning, include = False}
+# Backup data
+data_backup <- data
+
+# Consent, attention check, NAs, outliers, etc.
+```
+
+## Template for saving figures and plots
+```{r Saving plots, include = False}
+# PNG ------------
+# Save a plot generated with ggplot2 as PNG
+ggsave(
+  filename = here("Figures", "my_figure.png"),
+  plot = my_plot,  # Replace with your ggplot object
+  dpi = 300,
+  width = 6, height = 4, units = "in"  # Customize dimensions as needed (inches)
+)
+
+# Save a table
+write.csv(my_table, file = here("Tables", "my_table.csv"), row.names = FALSE)
+```
+
+## Analysis
+```{r}
+#| echo: true                     # show the code in the rendered document
+#| warning: false                 # hide any warnings generated in this code chunk
+#| output: true                   # display the output (plots, tables, text) from this chunk
+#| code-fold: true                # make the code chunk collapsible in the document (folded by default)
+#| code-summary: "Show the code"  # label for the collapsible code chunk
+#| cache: true                    # cache the output of this chunk to speed up future renders
+
+```
+
